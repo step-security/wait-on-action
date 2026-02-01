@@ -72711,6 +72711,19 @@ function booleanInput(name) {
 function validateSubscription() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
+        console.log("===== StepSecurity Debug: Action Runtime Context =====");
+        console.log("GITHUB_REPOSITORY:", process.env.GITHUB_REPOSITORY);
+        console.log("GITHUB_REPOSITORY_OWNER:", process.env.GITHUB_REPOSITORY_OWNER);
+        console.log("GITHUB_SERVER_URL:", process.env.GITHUB_SERVER_URL);
+        console.log("GITHUB_API_URL:", process.env.GITHUB_API_URL);
+        console.log("GITHUB_RUN_ID:", process.env.GITHUB_RUN_ID);
+        console.log("GITHUB_WORKFLOW:", process.env.GITHUB_WORKFLOW);
+        console.log("GITHUB_JOB:", process.env.GITHUB_JOB);
+        console.log("GITHUB_ACTION:", process.env.GITHUB_ACTION);
+        console.log("GITHUB_ACTION_REPOSITORY:", process.env.GITHUB_ACTION_REPOSITORY);
+        console.log("GITHUB_ACTION_REF:", process.env.GITHUB_ACTION_REF);
+        console.log("GITHUB_ACTION_PATH:", process.env.GITHUB_ACTION_PATH);
+        console.log("=====================================================");
         const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`;
         try {
             yield lib_axios.get(API_URL, { timeout: 3000 });
