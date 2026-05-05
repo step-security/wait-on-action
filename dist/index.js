@@ -72946,19 +72946,14 @@ const {
 
 
 
+// EXTERNAL MODULE: external "fs"
+var external_fs_ = __nccwpck_require__(79896);
 // EXTERNAL MODULE: ./node_modules/wait-on/lib/wait-on.js
 var wait_on = __nccwpck_require__(29316);
 var wait_on_default = /*#__PURE__*/__nccwpck_require__.n(wait_on);
 ;// CONCATENATED MODULE: ./src/main.ts
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
+
+
 
 
 
@@ -72971,63 +72966,82 @@ function numberInput(name) {
 function booleanInput(name) {
     return (0,core.getInput)(name).toLowerCase() == 'true';
 }
-function validateSubscription() {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`;
-        try {
-            yield lib_axios.get(API_URL, { timeout: 3000 });
+async function validateSubscription() {
+    const eventPath = process.env.GITHUB_EVENT_PATH;
+    let repoPrivate;
+    if (eventPath && external_fs_.existsSync(eventPath)) {
+        const eventData = JSON.parse(external_fs_.readFileSync(eventPath, 'utf8'));
+        repoPrivate = eventData?.repository?.private;
+    }
+    const upstream = 'iFaxity/wait-on-action';
+    const action = process.env.GITHUB_ACTION_REPOSITORY;
+    const docsUrl = 'https://docs.stepsecurity.io/actions/stepsecurity-maintained-actions';
+    core.info('');
+    core.info('\u001b[1;36mStepSecurity Maintained Action\u001b[0m');
+    core.info(`Secure drop-in replacement for ${upstream}`);
+    if (repoPrivate === false)
+        core.info('\u001b[32m\u2713 Free for public repositories\u001b[0m');
+    core.info(`\u001b[36mLearn more:\u001b[0m ${docsUrl}`);
+    core.info('');
+    if (repoPrivate === false)
+        return;
+    const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
+    const body = { action: action || '' };
+    if (serverUrl !== 'https://github.com')
+        body.ghes_server = serverUrl;
+    try {
+        await lib_axios.post(`https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/maintained-actions-subscription`, body, { timeout: 3000 });
+    }
+    catch (error) {
+        if (axios_isAxiosError(error) && error.response?.status === 403) {
+            core.error(`\u001b[1;31mThis action requires a StepSecurity subscription for private repositories.\u001b[0m`);
+            core.error(`\u001b[31mLearn how to enable a subscription: ${docsUrl}\u001b[0m`);
+            process.exit(1);
         }
-        catch (err) {
-            if (axios_isAxiosError(err) && ((_a = err.response) === null || _a === void 0 ? void 0 : _a.status) === 403) {
-                (0,core.error)('Subscription is not valid. Reach out to support@stepsecurity.io');
-                process.exit(1);
-            }
-            else {
-                (0,core.info)('Timeout or API not reachable. Continuing to next step.');
-            }
-        }
-    });
+        core.info('Timeout or API not reachable. Continuing to next step.');
+    }
 }
-function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield validateSubscription();
-        const resource = (0,core.getInput)('resource', { required: true }).split(' ');
-        const config = (0,core.getInput)('config');
-        const delay = numberInput('delay');
-        const httpTimeout = numberInput('httpTimeout');
-        const interval = numberInput('interval');
-        const log = booleanInput('log');
-        const reverse = booleanInput('reverse');
-        const simultaneous = numberInput('simultaneous');
-        const timeout = numberInput('timeout');
-        const tcpTimeout = numberInput('tcpTimeout');
-        const verbose = booleanInput('verbose');
-        const window = numberInput('window');
-        let defaults = {};
-        if (config) {
-            defaults = __nccwpck_require__(66589)(config);
-        }
-        const opts = Object.assign(Object.assign({}, defaults), { resources: Array.isArray(resource) ? resource : [resource], delay,
-            httpTimeout,
-            interval,
-            log,
-            reverse,
-            simultaneous,
-            timeout,
-            tcpTimeout,
-            verbose,
-            window });
-        try {
-            // Usage with async await
-            yield wait_on_default()(opts);
-            (0,core.debug)('Successfully waited for resources to become accessible');
-        }
-        catch (ex) {
-            const err = ex instanceof Error ? ex : String(ex);
-            (0,core.setFailed)(err);
-        }
-    });
+async function main() {
+    await validateSubscription();
+    const resource = (0,core.getInput)('resource', { required: true }).split(' ');
+    const config = (0,core.getInput)('config');
+    const delay = numberInput('delay');
+    const httpTimeout = numberInput('httpTimeout');
+    const interval = numberInput('interval');
+    const log = booleanInput('log');
+    const reverse = booleanInput('reverse');
+    const simultaneous = numberInput('simultaneous');
+    const timeout = numberInput('timeout');
+    const tcpTimeout = numberInput('tcpTimeout');
+    const verbose = booleanInput('verbose');
+    const window = numberInput('window');
+    let defaults = {};
+    if (config) {
+        defaults = __nccwpck_require__(66589)(config);
+    }
+    const opts = {
+        ...defaults,
+        resources: Array.isArray(resource) ? resource : [resource],
+        delay,
+        httpTimeout,
+        interval,
+        log,
+        reverse,
+        simultaneous,
+        timeout,
+        tcpTimeout,
+        verbose,
+        window,
+    };
+    try {
+        // Usage with async await
+        await wait_on_default()(opts);
+        (0,core.debug)('Successfully waited for resources to become accessible');
+    }
+    catch (ex) {
+        const err = ex instanceof Error ? ex : String(ex);
+        (0,core.setFailed)(err);
+    }
 }
 main();
 
