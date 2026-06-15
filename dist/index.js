@@ -19808,13 +19808,25 @@ module.exports = Any.extend({
         return schema.ref(ref);
     },
 
-    validate(value, { schema, state, prefs }) {
+    validate(value, { schema, state, prefs, error }) {
 
         Assert(schema.$_terms.link, 'Uninitialized link schema');
 
         const linked = internals.generate(schema, value, state, prefs);
         const ref = schema.$_terms.link[0].ref;
-        return linked.$_validate(value, state.nest(linked, `link:${ref.display}:${linked.type}`), prefs);
+
+        try {
+            return linked.$_validate(value, state.nest(linked, `link:${ref.display}:${linked.type}`), prefs);
+        }
+        catch (err) {
+            /* $lab:coverage:off$ */
+            if (!(err instanceof RangeError)) {
+                throw err;
+            }
+            /* $lab:coverage:on$ */
+
+            return { value, errors: error('link.depth') };
+        }
     },
 
     generate(schema, value, state, prefs) {
@@ -19865,6 +19877,10 @@ module.exports = Any.extend({
             obj.$_terms.whens.push({ concat: source });
             return obj.$_mutateRebuild();
         }
+    },
+
+    messages: {
+        'link.depth': '{{#label}} exceeds maximum recursion depth supported by the runtime'
     },
 
     manifest: {
@@ -67100,7 +67116,7 @@ module.exports = axios;
 /***/ ((module) => {
 
 "use strict";
-module.exports = /*#__PURE__*/JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.13.3","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.3.0","@hapi/topo":"^5.1.0","@sideway/address":"^4.1.5","@sideway/formula":"^3.0.1","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.1.3","@types/node":"^14.18.63","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
+module.exports = /*#__PURE__*/JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.13.4","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.3.0","@hapi/topo":"^5.1.0","@sideway/address":"^4.1.5","@sideway/formula":"^3.0.1","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.1.3","@types/node":"^14.18.63","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
 
 /***/ }),
 
