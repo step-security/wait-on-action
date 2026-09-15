@@ -15095,11 +15095,21 @@ exports.compile = function (messages, target) {
         if (code === 'root' ||
             Template.isTemplate(message)) {
 
+            // A flat code named __proto__ triggers the legacy accessor on plain-object assignment, and
+            // what we assign is always a Template, i.e. an object the accessor accepts, so it replaces
+            // target's own prototype instead of creating an own property. That in turn makes
+            // Template.isTemplate(target) true, so every code renders that one message
+
+            Assert(code !== '__proto__', 'Cannot use __proto__ as a message code');
+
             target[code] = message;
             continue;
         }
 
         if (typeof message === 'string') {
+
+            Assert(code !== '__proto__', 'Cannot use __proto__ as a message code');
+
             target[code] = new Template(message);
             continue;
         }
@@ -15109,20 +15119,26 @@ exports.compile = function (messages, target) {
         Assert(typeof message === 'object' && !Array.isArray(message), 'Invalid message for', code);
 
         const language = code;
-        target[language] = target[language] || {};
+
+        // Don't reuse an inherited object, otherwise a language named __proto__ or constructor writes on the prototype
+
+        const localizedTarget = Object.prototype.hasOwnProperty.call(target, language) ? target[language] : {};
+        target[language] = localizedTarget;
 
         for (code in message) {
             const localized = message[code];
 
+            Assert(code !== '__proto__', 'Cannot use __proto__ as a message code');
+
             if (code === 'root' ||
                 Template.isTemplate(localized)) {
 
-                target[language][code] = localized;
+                localizedTarget[code] = localized;
                 continue;
             }
 
             Assert(typeof localized === 'string', 'Invalid message for', code, 'in', language);
-            target[language][code] = new Template(localized);
+            localizedTarget[code] = new Template(localized);
         }
     }
 
@@ -15201,11 +15217,18 @@ exports.merge = function (base, extended) {
         if (code === 'root' ||
             Template.isTemplate(message)) {
 
+            // Same as in compile(), a flat code named __proto__ replaces target's own prototype
+
+            Assert(code !== '__proto__', 'Cannot use __proto__ as a message code');
+
             target[code] = message;
             continue;
         }
 
         if (typeof message === 'string') {
+
+            Assert(code !== '__proto__', 'Cannot use __proto__ as a message code');
+
             target[code] = new Template(message);
             continue;
         }
@@ -15215,20 +15238,26 @@ exports.merge = function (base, extended) {
         Assert(typeof message === 'object' && !Array.isArray(message), 'Invalid message for', code);
 
         const language = code;
-        target[language] = target[language] || {};
+
+        // Same as in compile(), don't reuse an inherited object
+
+        const localizedTarget = Object.prototype.hasOwnProperty.call(target, language) ? target[language] : {};
+        target[language] = localizedTarget;
 
         for (code in message) {
             const localized = message[code];
 
+            Assert(code !== '__proto__', 'Cannot use __proto__ as a message code');
+
             if (code === 'root' ||
                 Template.isTemplate(localized)) {
 
-                target[language][code] = localized;
+                localizedTarget[code] = localized;
                 continue;
             }
 
             Assert(typeof localized === 'string', 'Invalid message for', code, 'in', language);
-            target[language][code] = new Template(localized);
+            localizedTarget[code] = new Template(localized);
         }
     }
 
@@ -19776,6 +19805,7 @@ module.exports = Any.extend({
         'object.regex': '{{#label}} must be a RegExp object',
         'object.rename.multiple': '{{#label}} cannot rename {{:#from}} because multiple renames are disabled and another key was already renamed to {{:#to}}',
         'object.rename.override': '{{#label}} cannot rename {{:#from}} because override is disabled and target {{:#to}} exists',
+        'object.rename.proto': '{{#label}} cannot rename {{:#from}} because target {{:#to}} is a reserved key',
         'object.schema': '{{#label}} must be a Joi schema of {{#type}} type',
         'object.unknown': '{{#label}} is not allowed',
         'object.with': '{{:#mainWithLabel}} missing required peer {{:#peerWithLabel}}',
@@ -19796,8 +19826,15 @@ internals.clone = function (value, prefs) {
             return Clone(value, { shallow: true });
         }
 
-        const clone = Object.create(Object.getPrototypeOf(value));
+        const proto = Object.getPrototypeOf(value);
+        const clone = Object.create(proto);
         Object.assign(clone, value);
+
+        // Restore the prototype in case of pre-existing prototype pollution
+        if (Object.getPrototypeOf(clone) !== proto) {
+            Object.setPrototypeOf(clone, proto);
+        }
+
         return clone;
     }
 
@@ -20094,6 +20131,15 @@ internals.rename = function (schema, value, state, prefs, errors) {
                 if (prefs.abortEarly) {
                     return false;
                 }
+            }
+
+            if (to === '__proto__') {
+                errors.push(schema.$_createError('object.rename.proto', value, { from, to, pattern }, state, prefs));
+                if (prefs.abortEarly) {
+                    return false;
+                }
+
+                continue;
             }
 
             if (value[from] === undefined) {
@@ -21726,8 +21772,8 @@ internals.isoDate = function (value) {
         return null;
     }
 
-    if (/.*T.*[+-]\d\d$/.test(value)) {             // Add missing trailing zeros to timeshift
-        value += '00';
+    if (/T.*[+-]\d\d$/.test(value)) {                // Add missing separator and trailing zeros to timeshift
+        value += ':00';
     }
 
     const date = new Date(value);
@@ -68608,7 +68654,7 @@ module.exports = axios;
 /***/ ((module) => {
 
 "use strict";
-module.exports = /*#__PURE__*/JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.13.4","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.3.0","@hapi/topo":"^5.1.0","@sideway/address":"^4.1.5","@sideway/formula":"^3.0.1","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.1.3","@types/node":"^14.18.63","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
+module.exports = /*#__PURE__*/JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.13.8","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.3.0","@hapi/topo":"^5.1.0","@sideway/address":"^4.1.5","@sideway/formula":"^3.0.1","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.1.3","@types/node":"^14.18.63","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
 
 /***/ }),
 
