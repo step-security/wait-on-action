@@ -15125,7 +15125,11 @@ exports.compile = function (messages, target) {
 
         const language = code;
 
-        // Don't reuse an inherited object, otherwise a language named __proto__ or constructor writes on the prototype
+        // A language named __proto__ would replace target's own prototype with the localized messages
+
+        Assert(language !== '__proto__', 'Cannot use __proto__ as a language');
+
+        // Don't reuse an inherited object, otherwise a language named constructor writes on Object
 
         const localizedTarget = Object.prototype.hasOwnProperty.call(target, language) ? target[language] : {};
         target[language] = localizedTarget;
@@ -15244,7 +15248,9 @@ exports.merge = function (base, extended) {
 
         const language = code;
 
-        // Same as in compile(), don't reuse an inherited object
+        // Same as in compile(), reject __proto__ and don't reuse an inherited object
+
+        Assert(language !== '__proto__', 'Cannot use __proto__ as a language');
 
         const localizedTarget = Object.prototype.hasOwnProperty.call(target, language) ? target[language] : {};
         target[language] = localizedTarget;
@@ -20075,7 +20081,7 @@ internals.isPresent = function (options) {
 
 internals.rename = function (schema, value, state, prefs, errors) {
 
-    const renamed = {};
+    const renamed = Object.create(null);
     for (const rename of schema.$_terms.renames) {
         const matches = [];
         const pattern = typeof rename.from !== 'string';
@@ -21242,7 +21248,9 @@ module.exports = Any.extend({
                 Assert(options.multiple === undefined || typeof options.multiple === 'boolean', 'multiple option must be an boolean');
 
                 const address = internals.addressOptions(options);
-                const regex = new RegExp(`\\s*[${options.separator ? EscapeRegex(options.separator) : ','}]\\s*`);
+                // Only start the leading whitespace at the beginning of a run, otherwise the split is quadratic on long whitespace runs,
+                // and only build it when needed since lookbehind requires Safari 16.4+
+                const regex = options.multiple ? new RegExp(`(?:(?<!\\s)\\s+)?[${options.separator ? EscapeRegex(options.separator) : ','}]\\s*`) : undefined;
 
                 return this.$_addRule({ name: 'email', args: { options }, regex, address });
             },
@@ -69841,7 +69849,7 @@ module.exports = axios;
 /***/ ((module) => {
 
 "use strict";
-module.exports = /*#__PURE__*/JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.13.8","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.3.0","@hapi/topo":"^5.1.0","@sideway/address":"^4.1.5","@sideway/formula":"^3.0.1","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.1.3","@types/node":"^14.18.63","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
+module.exports = /*#__PURE__*/JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.13.9","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.3.0","@hapi/topo":"^5.1.0","@sideway/address":"^4.1.5","@sideway/formula":"^3.0.1","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.1.3","@types/node":"^14.18.63","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
 
 /***/ }),
 
